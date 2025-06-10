@@ -4,11 +4,12 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import PyPDF2
 import io
 import os
+import time
 
 # --- Configuração da Página Streamlit ---
 st.set_page_config(
     page_title="RAG com Gemma-2",
-    page_icon="�",
+    page_icon="🤖",
     layout="wide"
 )
 
@@ -24,7 +25,7 @@ def load_model(device_choice, max_vram_gb, cpu_threads):
         torch.set_num_threads(cpu_threads)
         st.info(f"PyTorch configurado para usar no máximo {torch.get_num_threads()} threads de CPU.")
 
-    model_name = "google/gemma-2-9b"
+    model_name = "google/gemma-2-9b-it"
     max_memory_map = None
     
     # --- Lógica de Seleção de Dispositivo e Recursos ---
@@ -34,7 +35,6 @@ def load_model(device_choice, max_vram_gb, cpu_threads):
         torch_dtype = torch.bfloat16
         st.info(f"Carregando o modelo ({model_name}) em: GPU. Isso pode levar alguns minutos...")
         
-        # --- NOVO: Lógica de Limite de VRAM ---
         if max_vram_gb > 0:
             max_memory_map = {0: f"{max_vram_gb}GiB"} # Assume GPU no índice 0
             st.info(f"Tentando limitar a VRAM da GPU a {max_vram_gb}GiB. Camadas que não couberem serão movidas para a RAM.")
@@ -91,7 +91,6 @@ def generate_response(tokenizer, model, device, context, query, max_new_tokens):
         st.warning("Por favor, insira uma pergunta.")
         return ""
 
-    st.info("Construindo o prompt e gerando a resposta...")
     messages = [
         {"role": "user", "content": f'Use o seguinte contexto para responder à pergunta. Se a resposta não estiver no contexto, diga "Não encontrei a resposta no documento."\n\n--- CONTEXTO ---\n{context}\n\n--- PERGUNTA ---\n{query}'}
     ]
@@ -130,43 +129,35 @@ with col1:
         help="'Auto' usará a GPU se disponível. 'Forçar CPU' usará apenas o processador."
     )
 
-    # --- NOVO: Controles Granulares de Recursos ---
     max_vram_option = 0
     if device_option == 'Auto (GPU se disponível)':
         max_vram_option = st.number_input(
-            "Limite de VRAM da GPU (GB)",
-            min_value=0,
-            max_value=128, # Valor alto arbitrário
-            value=0,
-            step=4,
-            help="Defina o máximo de VRAM que o modelo pode usar. 0 significa sem limite (usará o que precisar). Se o modelo não couber, o restante será alocado na RAM."
+            "Limite de VRAM da GPU (GB)", 0, 128, 0, 4,
+            help="Defina o máximo de VRAM que o modelo pode usar. 0 significa sem limite. O que não couber será alocado na RAM."
         )
 
-    # Obter o número de CPUs disponíveis para definir um máximo razoável
     available_cpus = os.cpu_count() or 4 
     cpu_threads_option = st.number_input(
-        "Limite de Threads da CPU",
-        min_value=1,
-        max_value=available_cpus,
-        value=available_cpus,
-        step=1,
+        "Limite de Threads da CPU", 1, available_cpus, available_cpus, 1,
         help=f"Defina o número máximo de núcleos de CPU que o PyTorch pode usar. Sua máquina tem {available_cpus} núcleos."
     )
 
-    # Carrega o modelo com base nas opções selecionadas
     tokenizer, model, device = load_model(device_option, max_vram_option, cpu_threads_option)
     
     st.divider()
 
     uploaded_file = st.file_uploader(
-        "Faça o upload do seu documento",
-        type=['txt', 'md', 'pdf'],
+        "Faça o upload do seu documento", type=['txt', 'md', 'pdf'],
         help="O conteúdo deste arquivo será usado como contexto."
     )
     
-    max_tokens = st.slider(
-        "Limite de Tokens para a Resposta", 50, 1024, 256, 10,
-        help="Define o número máximo de tokens que o modelo pode gerar na resposta."
+    # --- NOVO: Seletor para os tokens ---
+    token_options = [30, 50, 100, 500, 1000, 10000]
+    max_tokens = st.selectbox(
+        "Limite Máximo de Tokens para Resposta",
+        options=token_options,
+        index=2, # Define 100 como padrão
+        help="Escolha o número máximo de tokens que o modelo pode gerar na resposta."
     )
     
     query = st.text_area(
@@ -187,6 +178,7 @@ if uploaded_file:
 with col2:
     st.header("Resposta do Modelo")
     response_placeholder = st.empty()
+    time_placeholder = st.empty() # Placeholder para o tempo de resposta
 
     if submit_button:
         if not context:
@@ -195,7 +187,13 @@ with col2:
             st.warning("Por favor, digite sua pergunta.")
         else:
             with st.spinner(f"🤖 Gemma-2 está pensando no dispositivo {device.upper()}..."):
+                start_time = time.time()
                 response = generate_response(tokenizer, model, device, context, query, max_tokens)
+                end_time = time.time()
+                duration = end_time - start_time
+                
                 response_placeholder.markdown(response)
+                # --- NOVO: Exibe o tempo de resposta ---
+                time_placeholder.success(f"Resposta gerada em {duration:.2f} segundos.")
     else:
         response_placeholder.info("A resposta do modelo aparecerá aqui.")
