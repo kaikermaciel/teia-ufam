@@ -1,0 +1,6 @@
+streamlit
+torch
+transformers
+sentencepiece
+PyPDF2
+accelerate
