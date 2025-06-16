@@ -2,15 +2,16 @@ import os
 
 # Configurações do modelo
 MODEL_CHOICES = [
-    "gpt2", 
-    "bert-base-uncased", 
-    "google/gemma-2-9B-it",  # Modelo adicional do Google
-    "huggingface/llama-7B",   # Modelo Llama 7B
-    "deepseek/deepseek-model",  # Modelo DeepSeek
-    "facebook/opt-2.7b",   # Outro modelo do Facebook (OPT)
-    "EleutherAI/gpt-neo-2.7B",  # GPT-Neo 2.7B
-    "bigscience/bloom-560m",   # Bloom 560M
-    "meta/llama-13B"   # Modelo Llama 13B
+    "facebook/rag-token-nq",  # Modelo leve de RAG baseado em token
+    "facebook/rag-sequence-nq",  # Modelo leve de RAG baseado em sequência
+    "bigscience/bloom-560m",  # Modelo Bloom de tamanho médio com suporte RAG
+    "facebook/opt-1.3b",  # Modelo OPT 1.3B
+    "facebook/opt-2.7b",  # Modelo OPT 2.7B
+    "google/gemma-2-9B-it",  # Modelo Google Gemma 2.9B
+    "huggingface/llama-7B",  # Llama 7B
+    "huggingface/llama-13B",  # Llama 13B (mais pesado)
+    "deepseek-ai/DeepSeek-R1-0528",
+    "meta-llama/Llama-3.2-1B" 
 ]
 
 # Configurações de hardware
