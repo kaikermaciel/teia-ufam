@@ -4,10 +4,10 @@ import os
 import fitz
 import torch
 import psutil
+import ollama  # Importando a biblioteca Ollama
 from loader import (
     load_deepseek_model,
     load_gemma2_model,
-    load_llama_instruct_model,
     load_rag_model,
     check_system_resources
 )
@@ -36,6 +36,13 @@ def extract_text_from_pdf(pdf_path):
     for page in doc:
         text += page.get_text("text")
     return text
+
+def query_ollama_model(model_name, user_input):
+    """
+    Função para usar o modelo do Ollama para gerar uma resposta.
+    """
+    response = ollama.chat(model=model_name, messages=[user_input])
+    return response["text"]
 
 def query_and_measure(model, tokenizer, retriever, user_input,
                       max_new_tokens, min_length, top_p, temperature):
@@ -105,14 +112,16 @@ def main():
     if st.button("Carregar Modelo"):
         check_system_resources(ram, cpu, gpu)
         with st.spinner("Carregando modelo..."):
-            if model_choice == "google/gemma-2-9B-it":
+            if model_choice == "deepseek-r1:1.5b":  # Novo modelo Ollama
+                model_name = "deepseek-r1:1.5b"
+                m = model_name  # Armazena o nome do modelo no estado da sessão
+                tk = None  # Não usa tokenizer, pois Ollama é independente
+                rt = None  # Não usa retriever no caso do Ollama
+            elif model_choice == "google/gemma-2-9B-it":
                 m, tk = load_gemma2_model(model_choice)
                 rt = None
             elif model_choice == "deepseek-ai/DeepSeek-R1-0528":
                 m, tk = load_deepseek_model(model_choice)
-                rt = None
-            elif model_choice == "meta-llama/Llama-3.2-1B":
-                m, tk = load_llama_instruct_model(model_choice)
                 rt = None
             else:
                 m, tk, rt = load_rag_model(model_choice)
@@ -134,19 +143,24 @@ def main():
             if st.session_state.retriever and st.session_state.documents:
                 st.session_state.retriever.index_passages(st.session_state.documents)
             with st.spinner("Gerando resposta..."):
-                resp, tempo, tps = query_and_measure(
-                    st.session_state.model,
-                    st.session_state.tokenizer,
-                    st.session_state.retriever,
-                    pergunta,
-                    max_new_tokens,
-                    min_length,
-                    top_p,
-                    temperature
-                )
-            st.write("**Resposta:**", resp)
-            st.write(f"Tempo de inferência: {tempo:.2f}s")
-            st.write(f"Tokens por segundo: {tps:.2f}")
+                if st.session_state.model == "deepseek-r1:1.5b":
+                    # Consultar modelo Ollama diretamente
+                    response = query_ollama_model(st.session_state.model, pergunta)
+                else:
+                    response, tempo, tps = query_and_measure(
+                        st.session_state.model,
+                        st.session_state.tokenizer,
+                        st.session_state.retriever,
+                        pergunta,
+                        max_new_tokens,
+                        min_length,
+                        top_p,
+                        temperature
+                    )
+            st.write("**Resposta:**", response)
+            if st.session_state.model != "deepseek-r1:1.5b":  # Só exibe para modelos RAG
+                st.write(f"Tempo de inferência: {tempo:.2f}s")
+                st.write(f"Tokens por segundo: {tps:.2f}")
 
 if __name__ == "__main__":
     main()
