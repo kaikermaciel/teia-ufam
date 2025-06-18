@@ -1,0 +1,7 @@
+streamlit
+PyMuPDF
+torch
+psutil
+ollama
+transformers
+scikit-learn
