@@ -1,0 +1,37 @@
+
+    MODEL  : deepseek-r1:1.5b
+    RAM    : 1 GB
+    GPU    : 1 camadas
+    CPU    : 1 núcleos
+    TEMPO  : 47.09 s
+    TOKEN  : 13
+    TOKEN/SEC : 0.28
+    -------------------------------
+    
+    MODEL  : gemma3:4b
+    RAM    : 1 GB
+    GPU    : 1 camadas
+    CPU    : 1 núcleos
+    TEMPO  : 72.60 s
+    TOKEN  : 14
+    TOKEN/SEC : 0.19
+    -------------------------------
+    
+    MODEL  : gemma3:4b
+    RAM    : 1 GB
+    GPU    : 1 camadas
+    CPU    : 1 núcleos
+    TEMPO  : 75.56 s
+    TOKEN  : 14
+    TOKEN/SEC : 0.19
+    -------------------------------
+    
+    MODEL  : qwen3:4b
+    RAM    : 1 GB
+    GPU    : 1 camadas
+    CPU    : 1 núcleos
+    TEMPO  : 234.58 s
+    TOKEN  : 5
+    TOKEN/SEC : 0.02
+    -------------------------------
+    

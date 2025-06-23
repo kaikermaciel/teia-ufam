@@ -2,3 +2,4 @@ __pycache/
 .env
 .cpy
 uploaded_files/
+response_log.txt

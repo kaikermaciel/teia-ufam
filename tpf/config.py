@@ -12,7 +12,9 @@ MODEL_CHOICES = [
     "huggingface/llama-13B",  # Llama 13B (mais pesado)
     "deepseek-ai/DeepSeek-R1-0528",
     "meta-llama/Llama-3.2-1B",
-    "deepseek-r1:1.5b" 
+    "deepseek-r1:1.5b",
+    "gemma3:4b", 
+    "qwen3:4b"
 ]
 
 # Configurações de hardware
