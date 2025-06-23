@@ -9,8 +9,7 @@ from loader import (
     load_deepseek_model,
     load_gemma2_model,
     load_rag_model,
-    check_system_resources,
-    load_ollama_model
+    check_system_resources
 )
 from config import MODEL_CHOICES, DEFAULT_RAM_LIMIT, DEFAULT_CPU_CORES, DEFAULT_GPU_LAYERS, UPLOAD_DIR
 
@@ -29,7 +28,6 @@ def choose_model():
     cpu = st.slider("Número de núcleos da CPU", 1, psutil.cpu_count(logical=False), DEFAULT_CPU_CORES)
     gpu = st.slider("Número de camadas da GPU", 1, 8, DEFAULT_GPU_LAYERS)
     n_docs = st.slider("Número de documentos RAG", 1, 10, 5)
-    
     return model_choice, ram, cpu, gpu, n_docs
 
 def extract_text_from_pdf(pdf_path):
@@ -48,13 +46,14 @@ def query_ollama_model(model_name, user_input):
 
 def query_and_measure(model, tokenizer, retriever, user_input,
                       max_new_tokens, min_length, top_p, temperature):
+    
     inputs = tokenizer(user_input, return_tensors="pt")
-    in_tokens = inputs["input_ids"].shape[1]
-    
-    start = time.time()
-    
+    in_tokens = inputs["input_ids"].shape[1]  # Número de tokens da pergunta
+
+    # Se for RAG, recupera documentos
     if retriever:
         doc_scores, docs = retriever(inputs["input_ids"], return_tensors="pt")
+        start = time.time()
         outputs = model.generate(
             input_ids=inputs["input_ids"],
             doc_scores=doc_scores,
@@ -67,7 +66,9 @@ def query_and_measure(model, tokenizer, retriever, user_input,
             temperature=temperature,
             early_stopping=True
         )
+        end = time.time()
     else:
+        start = time.time()
         outputs = model.generate(
             input_ids=inputs["input_ids"],
             max_new_tokens=max_new_tokens,
@@ -79,33 +80,19 @@ def query_and_measure(model, tokenizer, retriever, user_input,
             temperature=temperature,
             early_stopping=True
         )
-    
-    end = time.time()
-    out_tokens = outputs.shape[1]
+        end = time.time()
+
+    out_tokens = outputs.shape[1]  # Número de tokens na resposta
     processing_time = end - start
     tps = (in_tokens + out_tokens) / processing_time if processing_time > 0 else 0
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+
+    print(f"Tokens na pergunta: {in_tokens}")
+    print(f"Tokens na resposta: {out_tokens}")
+    print(f"Total de tokens: {in_tokens + out_tokens}")
     
     return response, processing_time, tps
 
-def check_system_resources(ram_limit, cpu_cores, gpu_layers):
-    # Verificar a quantidade de RAM disponível
-    available_ram = psutil.virtual_memory().available / (1024 ** 3)  # GB
-    if available_ram < ram_limit:
-        st.warning(f"RAM insuficiente: {available_ram:.2f} GB disponíveis. O modelo pode não funcionar corretamente.")
-    
-    # Verificar a quantidade de núcleos da CPU
-    available_cpu = psutil.cpu_count(logical=False)
-    if available_cpu < cpu_cores:
-        st.warning(f"Núcleos de CPU insuficientes: {available_cpu} disponíveis.")
-    
-    # GPU (simulação para limitar camadas; seria mais complexo com um gerenciador de GPU)
-    if torch.cuda.is_available():
-        available_gpu = torch.cuda.device_count()
-        if available_gpu < gpu_layers:
-            st.warning(f"Camadas da GPU insuficientes: {available_gpu} disponíveis.")
-    else:
-        st.warning("Nenhuma GPU disponível.")
 
 def main():
     model_choice, ram, cpu, gpu, n_docs = choose_model()
@@ -120,44 +107,36 @@ def main():
         st.session_state.documents = []
         if not os.path.exists(UPLOAD_DIR):
             os.makedirs(UPLOAD_DIR)
-        progress_bar = st.progress(0)
-        for i, uf in enumerate(uploaded_files):
+        for uf in uploaded_files:
             path = os.path.join(UPLOAD_DIR, uf.name)
             with open(path, "wb") as f:
                 f.write(uf.getbuffer())
             txt = extract_text_from_pdf(path)
             st.session_state.documents.append(txt)
-            progress_bar.progress((i + 1) / len(uploaded_files))
         st.success(f"{len(st.session_state.documents)} PDF(s) carregado(s).")
 
     # Botão para carregar modelo
     if st.button("Carregar Modelo"):
         check_system_resources(ram, cpu, gpu)
         with st.spinner("Carregando modelo..."):
-            try:
-                # Carregar o modelo de acordo com a escolha
-                if model_choice == "deepseek-r1:1.5b":
-                    model_name = "deepseek-r1:1.5b"
-                    model = load_ollama_model(model_name)
-                    tokenizer = None
-                    retriever = None
-                elif model_choice == "google/gemma-2-9B-it":
-                    model, tokenizer = load_gemma2_model(model_choice)
-                    retriever = None
-                elif model_choice == "deepseek-ai/DeepSeek-R1-0528":
-                    model, tokenizer = load_deepseek_model(model_choice)
-                    retriever = None
-                else:
-                    model, tokenizer, retriever = load_rag_model(model_choice)
-                    retriever.n_docs = n_docs
-                
-                # Armazenando no estado da sessão
-                st.session_state.model = model
-                st.session_state.tokenizer = tokenizer
-                st.session_state.retriever = retriever
-                st.success(f"Modelo {model_choice} carregado com sucesso.")
-            except Exception as e:
-                st.error(f"Erro ao carregar o modelo: {e}")
+            if model_choice == "deepseek-r1:1.5b":  # Novo modelo Ollama
+                model_name = "deepseek-r1:1.5b"
+                m = model_name  # Armazena o nome do modelo no estado da sessão
+                tk = None  # Não usa tokenizer, pois Ollama é independente
+                rt = None  # Não usa retriever no caso do Ollama
+            elif model_choice == "google/gemma-2-9B-it":
+                m, tk = load_gemma2_model(model_choice)
+                rt = None
+            elif model_choice == "deepseek-ai/DeepSeek-R1-0528":
+                m, tk = load_deepseek_model(model_choice)
+                rt = None
+            else:
+                m, tk, rt = load_rag_model(model_choice)
+                rt.n_docs = n_docs
+        st.session_state.model = m
+        st.session_state.tokenizer = tk
+        st.session_state.retriever = rt
+        st.success(f"Modelo {model_choice} pronto para uso.")
 
     # Área de pergunta e botão de envio
     if st.session_state.model:
