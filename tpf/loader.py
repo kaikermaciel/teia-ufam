@@ -1,28 +1,39 @@
 import ollama  # Importando a biblioteca Ollama
+from huggingface_hub import login  # Importando para login no Hugging Face
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, RagTokenizer, RagRetriever, RagSequenceForGeneration
 import torch
 import psutil
 import os
+import streamlit as st
+
+# Função para fazer login no Hugging Face usando um token de acesso
+def login_to_huggingface():
+    try:
+        # Faça o login no Hugging Face com o token
+        login(token="seu_token_aqui")  # Substitua pelo seu token de acesso
+    except Exception as e:
+        print(f"Erro ao fazer login no Hugging Face: {e}")
+        raise
 
 # Função para verificar recursos do sistema
 def check_system_resources(ram_limit, cpu_cores, gpu_layers):
     # Verificar a quantidade de RAM disponível
     available_ram = psutil.virtual_memory().available / (1024 ** 3)  # GB
     if available_ram < ram_limit:
-        raise MemoryError(f"RAM insuficiente: {available_ram:.2f} GB disponíveis.")
+        st.warning(f"RAM insuficiente: {available_ram:.2f} GB disponíveis. O modelo pode não funcionar corretamente.")
     
     # Verificar a quantidade de núcleos da CPU
     available_cpu = psutil.cpu_count(logical=False)
     if available_cpu < cpu_cores:
-        raise ValueError(f"Núcleos de CPU insuficientes: {available_cpu} disponíveis.")
+        st.warning(f"Núcleos de CPU insuficientes: {available_cpu} disponíveis.")
     
-    # GPU (simulação para limitar camadas; seria mais complexo com um gerenciador de GPU)
+    # Verificar GPU
     if torch.cuda.is_available():
         available_gpu = torch.cuda.device_count()
         if available_gpu < gpu_layers:
-            raise ValueError(f"Camadas da GPU insuficientes: {available_gpu} disponíveis.")
+            st.warning(f"Camadas da GPU insuficientes: {available_gpu} disponíveis.")
     else:
-        raise EnvironmentError("Nenhuma GPU disponível.")
+        st.warning("Nenhuma GPU disponível, utilizando CPU.")
 
 # Função para carregar o modelo DeepSeek-R1-1.5B usando a API Ollama
 def load_ollama_model(model_name):
@@ -30,9 +41,9 @@ def load_ollama_model(model_name):
     Função para carregar o modelo do Ollama, como DeepSeek-R1-1.5B.
     """
     try:
-        # Carregar o modelo via Ollama
-        model = model_name  # O modelo é identificado pelo nome no Ollama
-        return model  # Não é necessário carregar o modelo da mesma forma que os modelos Transformers
+        # Usando a API Ollama para carregar o modelo
+        model = ollama.load(model_name)  # Aqui é onde a API Ollama carrega o modelo.
+        return model  # O modelo carregado é retornado
     except Exception as e:
         print(f"Erro ao carregar o modelo {model_name}: {e}")
         raise
