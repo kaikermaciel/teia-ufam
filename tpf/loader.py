@@ -22,10 +22,13 @@ def check_system_resources(ram_limit, cpu_cores, gpu_layers):
     if available_ram < ram_limit:
         st.warning(f"RAM insuficiente: {available_ram:.2f} GB disponíveis. O modelo pode não funcionar corretamente.")
     
-    # Verificar a quantidade de núcleos da CPU
+    # Limitar o número de núcleos da CPU
     available_cpu = psutil.cpu_count(logical=False)
     if available_cpu < cpu_cores:
         st.warning(f"Núcleos de CPU insuficientes: {available_cpu} disponíveis.")
+    else:
+        # Configurar a variável de ambiente para limitar núcleos de CPU
+        os.environ["OMP_NUM_THREADS"] = str(cpu_cores)
     
     # Verificar GPU
     if torch.cuda.is_available():
@@ -43,6 +46,8 @@ def load_ollama_model(model_name):
     try:
         # Usando a API Ollama para carregar o modelo
         model = ollama.load(model_name)  # Aqui é onde a API Ollama carrega o modelo.
+        model.to(device='cuda' if torch.cuda.is_available() else 'cpu')  # Move o modelo para GPU se disponível
+        print(f"Modelo {model_name} carregado com sucesso.")
         return model  # O modelo carregado é retornado
     except Exception as e:
         print(f"Erro ao carregar o modelo {model_name}: {e}")

@@ -14,7 +14,9 @@ MODEL_CHOICES = [
     "meta-llama/Llama-3.2-1B",
     "deepseek-r1:1.5b",
     "gemma3:4b", 
-    "qwen3:4b"
+    "qwen3:4b",
+    "qwen3:8b",
+    "deepseek-r1:14b"
 ]
 
 # Configurações de hardware
