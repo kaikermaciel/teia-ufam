@@ -69,7 +69,7 @@ def load_rag_model(model_name):
         model = AutoModelForCausalLM.from_pretrained(model_name)
         tokenizer = AutoTokenizer.from_pretrained(model_name)
         retriever = None  # Não é necessário para esse modelo específico
-    elif model_name == "deepseek-ai/DeepSeek-R1-1.5B":  # Carregamento do modelo Ollama
+    elif model_name == "deepseek-ai/DeepSeek-R1-1.5B" or "qwen3:4b" or "qwen3:8b" or "deepseek-r1:14b" or "gemma3:4b":  # Carregamento do modelo Ollama
         model = load_ollama_model(model_name)  # Não precisa de retriever nem tokenizer
         tokenizer = None  # Ollama cuida do tokenizer
         retriever = None  # Não usa retriever para Ollama

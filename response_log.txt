@@ -35,3 +35,57 @@
     TOKEN/SEC : 0.02
     -------------------------------
     
+    MODEL  : deepseek-r1:1.5b
+    RAM    : 7 GB
+    GPU    : 2 camadas
+    CPU    : 2 núcleos
+    TEMPO  : 237.64 s
+    TOKEN  : 5
+    TOKEN/SEC : 0.02
+    -------------------------------
+    
+    MODEL  : deepseek-r1:1.5b
+    RAM    : 8 GB
+    GPU    : 1 camadas
+    CPU    : 2 núcleos
+    TEMPO  : 39.48 s
+    TOKEN  : 9
+    TOKEN/SEC : 0.23
+    -------------------------------
+    
+    MODEL  : deepseek-r1:1.5b
+    RAM    : 8 GB
+    GPU    : 1 camadas
+    CPU    : 2 núcleos
+    TEMPO  : 169.30 s
+    TOKEN  : 5
+    TOKEN/SEC : 0.03
+    -------------------------------
+    
+    MODEL  : deepseek-r1:1.5b
+    RAM    : 8 GB
+    GPU    : 1 camadas
+    CPU    : 2 núcleos
+    TEMPO  : 35.71 s
+    TOKEN  : 15
+    TOKEN/SEC : 0.42
+    -------------------------------
+    
+    MODEL  : deepseek-r1:1.5b
+    RAM    : 8 GB
+    GPU    : 1 camadas
+    CPU    : 1 núcleos
+    TEMPO  : 352.36 s
+    TOKEN  : 8
+    TOKEN/SEC : 0.02
+    -------------------------------
+    
+    MODEL  : deepseek-r1:1.5b
+    RAM    : 8 GB
+    GPU    : 1 camadas
+    CPU    : 1 núcleos
+    TEMPO  : 338.16 s
+    TOKEN  : 8
+    TOKEN/SEC : 0.02
+    -------------------------------
+    

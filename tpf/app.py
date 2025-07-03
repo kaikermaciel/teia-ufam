@@ -98,11 +98,11 @@ def query_ollama_model(model_name, user_input, documents):
         messages.append({"role": "system", "content": f"Documento {idx + 1}: {doc}"})  # Passando documentos como "system"
     
     # Medir o tempo de resposta
-    start_time = time.time()
-    response = ollama.chat(model=model_name, messages=messages)
-    end_time = time.time()
     
-    processing_time = end_time - start_time
+    response = ollama.chat(model=model_name, messages=messages)
+    tokens = response['prompt_eval_count']
+    print(tokens)
+    print(response)
     
     # Gerar a resposta com uma menção à origem dos dados (documentos)
     content = response['message']['content']
@@ -113,7 +113,8 @@ def query_ollama_model(model_name, user_input, documents):
     
     # Adiciona a fonte no final da resposta
     final_response = content + sources
-    return final_response, processing_time
+    processing_time = response['eval_duration'] / 1000000000  # Convertendo para segundos
+    return final_response, processing_time, tokens
 
 def query_and_measure(model, tokenizer, retriever, user_input,
                       max_new_tokens, min_length, top_p, temperature):
@@ -158,42 +159,7 @@ def query_and_measure(model, tokenizer, retriever, user_input,
     response = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return response, processing_time, tps
 
-def check_system_resources(ram_limit, cpu_cores, gpu_layers):
 
-    # Verifica a utilização de GPU
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    st.write(f"O modelo será carregado na: {device}")
-    
-    # Verificar o uso da RAM
-    ram_used_before = psutil.virtual_memory().used / (1024 ** 3)  # GB
-    st.write(f"RAM usada antes de carregar o modelo: {ram_used_before:.2f} GB")
-    
-    if torch.cuda.is_available():
-        st.write(f"Informações sobre a GPU: {torch.cuda.get_device_name(device)}")
-        st.write(f"Uso de GPU: {torch.cuda.memory_allocated(device) / (1024 ** 3):.2f} GB alocados.")
-    
-    # Limitar o número de núcleos da CPU
-    os.environ["OMP_NUM_THREADS"] = str(cpu_cores)
-
-    # Monitorando o uso do modelo
-    start_time = time.time()
-
-    # Simulação de carregamento de modelo
-    model = torch.nn.Linear(100, 10)
-    #model.to(device)
-    #st.write("Modelo carregado com sucesso.")
-    #st.write(f"Uso de GPU: {torch.cuda.memory_allocated(device) / (1024 ** 3):.2f} GB alocados.")
-
-    # Uso da memória após o carregamento
-    ram_used_after = psutil.virtual_memory().used / (1024 ** 3)  # GB
-    st.write(f"RAM usada após carregar o modelo: {ram_used_after:.2f} GB")
-    
-    if torch.cuda.is_available():
-        st.write(f"Uso de GPU (max): {torch.cuda.memory_reserved(device) / (1024 ** 3):.2f} GB reservados.")
-    
-    end_time = time.time()
-    execution_time = end_time - start_time
-    st.write(f"Tempo de execução: {execution_time:.2f} segundos")
     
 def main():
     model_choice, ram, cpu, gpu, n_docs = choose_model()
@@ -267,7 +233,6 @@ def main():
     if st.session_state.model:
         pergunta = st.text_area("Digite sua pergunta:", value=st.session_state.get("question", ""))
         tokens = count_tokens(pergunta)  # Contagem de tokens
-        st.write(f"Tokens atuais: {tokens} tokens")
 
         # Área de pergunta e botão de envio
         if st.session_state.model:
@@ -275,7 +240,7 @@ def main():
                 with st.spinner("Gerando resposta..."):
                     if st.session_state.model == "deepseek-r1:1.5b" or st.session_state.model == "gemma3:4b" or st.session_state.model == "qwen3:4b" or st.session_state.model == "qwen3:8b" or st.session_state.model == "deepseek-r1:14b":
                         # Consultar modelo Ollama diretamente, passando documentos carregados
-                        response, tempo = query_ollama_model(st.session_state.model, pergunta, st.session_state.documents)
+                        response, tempo, tokens = query_ollama_model(st.session_state.model, pergunta, st.session_state.documents)
                     else:
                         if st.session_state.retriever and st.session_state.documents:
                             st.session_state.retriever.index_passages(st.session_state.documents)
@@ -289,8 +254,9 @@ def main():
                             top_p=0.9,
                             temperature=0.7
                         )
+                st.write("**Tokens da pergunta:**", tokens)
                 st.write("**Resposta:**", response)
-                if st.session_state.model != "deepseek-r1:1.5b":  # Só exibe para modelos RAG
+                if st.session_state.model != "deepseek-r1:1.5b" or st.session_state.model != "gemma3:4b" or st.session_state.model != "qwen3:4b" or st.session_state.model != "qwen3:8b" or st.session_state.model != "deepseek-r1:14b":  # Só exibe para modelos RAG
                     st.write(f"Tempo de inferência: {tempo:.2f}s")
                     st.write(f"Tokens por segundo: {tps:.2f}")
                 else:
